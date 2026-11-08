@@ -1,0 +1,27 @@
+# OS / editor
+.DS_Store
+.claude/
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Runtime data: scraped business contacts, caches, audits, logs
+data/
+*.csv
+
+# Generated outputs (contain scraped contact data)
+report.html
+outreach.html

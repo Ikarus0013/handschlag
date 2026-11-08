@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handschlag Leads</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1c1b19;--mute:#6d6a63;--line:#e4e1da;--acc:#b4532a;--good:#2f7a4a;--bad:#b4532a;--mid:#b08a1e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,system-ui,sans-serif;padding:24px 20px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mute);margin:0 0 18px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.bar input,.bar select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;font:inherit}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.stat b{display:block;font-size:20px}.stat span{color:var(--mute);font-size:12px}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--mute);font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:#faf9f7}
+tr.main:hover{background:#faf8f4;cursor:pointer}.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;min-width:34px;text-align:center;padding:1px 6px;border-radius:10px;font-weight:600;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;background:#efece6;color:var(--mute);margin-left:4px}
+.contact{font-size:13px;white-space:nowrap}.stsel{font:inherit;font-size:12px;padding:3px}button{padding:7px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;font:inherit;cursor:pointer}
+.det td{background:#fcfbf9;color:#3a3833}.det ul{margin:4px 0 4px 18px;padding:0}a{color:var(--acc)}
+.muted{color:var(--mute)}.warn{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;background:#c0392b;color:#fff;margin-left:4px;font-weight:600}
+</style></head><body>
+<h1>Handschlag: dealer leads</h1>
+<p class="sub">Sorted by lead score = outdated website × good reputation. Click a row for findings.</p>
+<div class="stats" id="stats"></div>
+<div class="bar">
+  <input id="q" placeholder="Search name / town / domain" size="28">
+  <select id="cat"><option value="car">Car dealers</option><option value="">All categories</option><option>camper</option><option>motorbike</option><option>truck</option><option>rental</option><option>workshop</option></select>
+  <select id="site"><option value="">All website types</option><option value="own">Has own website</option><option value="none">No website</option><option value="other">Social/marketplace only</option><option value="ssl">⚠ SSL warning</option></select>
+  <label><input type="checkbox" id="nochain" checked> hide chains</label>
+  <label>min dealer score <input type="number" id="mind" value="0" min="0" max="100" style="width:60px"></label>
+  <select id="st"><option value="">Any status</option></select>
+  <label><input type="checkbox" id="hasmail"> has email</label>
+  <button id="exp" type="button">Export CSV</button>
+  <label>max km <input type="number" id="maxkm" value="50" min="1" style="width:60px"></label>
+</div>
+<div class="wrap"><table><thead><tr>
+<th data-k="lead_score" class="num">Lead</th><th data-k="site_score" class="num">Site</th><th data-k="dealer_score" class="num">Dealer</th>
+<th data-k="name">Dealer</th><th data-k="distance_km" class="num">km</th><th data-k="rating" class="num">★</th><th data-k="reviews" class="num">Reviews</th>
+<th data-k="domain">Website</th><th>Contact</th><th data-k="_status">Status</th><th>Top issues</th></tr></thead><tbody id="tb"></tbody></table></div>
+<script>
+const DATA=/*DATA*/[];
+const STATUSES=["new","to call","called – no answer","called","emailed","visited","interested","not interested","deal"];
+let CRM={};try{CRM=JSON.parse(localStorage.getItem("handschlag_crm")||"{}")}catch(e){}
+const saveCRM=()=>{try{localStorage.setItem("handschlag_crm",JSON.stringify(CRM))}catch(e){}};
+const crm=id=>CRM[id]||(CRM[id]={status:"new",note:""});
+DATA.forEach(r=>r._status=(CRM[r.place_id]||{}).status||"new");
+let sortK="lead_score",dir=-1;const $=id=>document.getElementById(id);
+const col=v=>v>=60?"#f6dccf":v>=35?"#f3e7c4":"#d9ecdf";
+function rows(){const stv=$("st").value,hm=$("hasmail").checked;const q=$("q").value.toLowerCase(),c=$("cat").value,s=$("site").value,nc=$("nochain").checked,md=+$("mind").value,mk=+$("maxkm").value;
+ return DATA.filter(r=>(!stv||r._status===stv)&&(!hm||r.email)&&(!c||r.category===c)&&(!nc||!r.chain)&&r.dealer_score>=md&&r.distance_km<=mk&&
+  (!s||(s==="ssl"?r.https_status==="cert_invalid":s==="other"?!["own","none"].includes(r.site_type):r.site_type===s))&&
+  (!q||(r.name+" "+r.address+" "+r.domain).toLowerCase().includes(q)))
+ .sort((a,b)=>{const x=a[sortK]??-1,y=b[sortK]??-1;return (x>y?1:x<y?-1:0)*dir})}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function render(){const R=rows(),tb=$("tb");tb.innerHTML="";
+ const own=R.filter(r=>r.site_type==="own").length;
+ $("stats").innerHTML=[["Shown",R.length],["Own website",own],["No website",R.filter(r=>r.site_type==="none").length],["Site score ≥ 50",R.filter(r=>r.site_score>=50).length],["Avg ★",(R.filter(r=>r.rating).reduce((a,r)=>a+r.rating,0)/Math.max(1,R.filter(r=>r.rating).length)).toFixed(2)]]
+  .map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join("");
+ for(const r of R){const tr=document.createElement("tr");tr.className="main";
+  const ssl=r.https_status==="cert_invalid";
+  const href=ssl?String(r.website).replace(/^https:/,"http:"):r.website;
+  const site=r.site_type==="own"?`<a href="${esc(href)}" target="_blank" onclick="event.stopPropagation()">${esc(r.domain)}</a>${ssl?`<span class="warn" title="https:// shows a browser security warning – link opens http:// instead">⚠ SSL</span>`:""}`:r.site_type==="none"?'<span class="muted">none</span>':`<span class="muted">${esc(r.site_type)}</span>`;
+  tr.innerHTML=`<td class="num"><span class="pill" style="background:${col(r.lead_score)}">${r.lead_score}</span></td><td class="num">${r.site_score}</td><td class="num">${r.dealer_score}</td>
+  <td><b>${esc(r.name)}</b>${r.chain?`<span class="tag">chain ×${r.chain_size}</span>`:""}${(r.website_source||"").startsWith("found")?`<span class="tag" title="${esc(r.website_source)}">site found</span>`:""}${r.category!=="car"?`<span class="tag">${r.category}</span>`:""}<br><span class="muted">${esc(r.address)}</span></td>
+  <td class="num">${r.distance_km}</td><td class="num">${r.rating??"–"}</td><td class="num">${r.reviews||0}</td><td>${site}</td>
+  <td class="contact">${r.contact_person?`<b>${esc(r.contact_person)}</b><br>`:""}${r.phone?`<a href="tel:${esc(r.phone.replace(/\s/g,""))}" onclick="event.stopPropagation()">${esc(r.phone)}</a>${r.phone_kind==="mobile"?' <span class="tag">mobile</span>':""}<br>`:""}${r.email?`<a href="mailto:${esc(r.email)}" onclick="event.stopPropagation()">${esc(r.email)}</a>`:""}</td>
+  <td><select class="stsel" onclick="event.stopPropagation()">${STATUSES.map(x=>`<option${x===r._status?" selected":""}>${x}</option>`).join("")}</select></td>
+  <td class="muted">${esc(r.findings.slice(0,2).join(" · "))}</td>`;
+  const sel=tr.querySelector(".stsel");sel.onchange=()=>{crm(r.place_id).status=sel.value;r._status=sel.value;saveCRM()};
+  const det=document.createElement("tr");det.className="det";det.hidden=true;
+  det.innerHTML=`<td colspan="11"><textarea class="note" placeholder="Notes (saved in this browser)" rows="2" style="width:100%;font:inherit;margin-bottom:6px">${esc((CRM[r.place_id]||{}).note||"")}</textarea><ul>${r.findings.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
+  <span class="muted">${esc(r.phone)} · <a href="${esc(r.maps_url)}" target="_blank">Google Maps</a>${r.generator?" · "+esc(r.generator):""}${r.builder?" · builder: "+esc(r.builder):""}${r.inventory_provider?" · inventory: "+esc(r.inventory_provider):""}${r.title?" · title: “"+esc(r.title)+"”":""}</span></td>`;
+  const ta=det.querySelector(".note");ta.onclick=e=>e.stopPropagation();ta.oninput=()=>{crm(r.place_id).note=ta.value;saveCRM()};
+  tr.onclick=()=>det.hidden=!det.hidden;tb.append(tr,det)}}
+$("st").innerHTML+=STATUSES.map(x=>`<option>${x}</option>`).join("");
+$("exp").onclick=()=>{const cols=["lead_score","site_score","dealer_score","name","contact_person","phone","phone_kind","email","email_alt","website","impressum_url","address","distance_km","rating","reviews","_status","note","findings"];
+ const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+ const lines=[cols.join(",")].concat(rows().map(r=>cols.map(k=>q(k==="note"?(CRM[r.place_id]||{}).note:k==="findings"?r.findings.join(" | "):r[k])).join(",")));
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+lines.join("\n")],{type:"text/csv"}));a.download="handschlag-leads.csv";a.click()};
+document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;dir=sortK===k?-dir:(k==="name"||k==="distance_km"||k==="domain"?1:-1);sortK=k;render()});
+["q","cat","site","nochain","mind","maxkm","st","hasmail"].forEach(id=>$(id).addEventListener("input",render));render();
+</script></body></html>

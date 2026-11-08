@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handschlag Outreach</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1c1b19;--mute:#6d6a63;--line:#e4e1da;--acc:#b4532a;--ok:#2f7a4a;--warn:#b08a1e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,system-ui,sans-serif;padding:20px}
+h1{font-size:20px;margin:0}header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.prog{font-size:13px;color:var(--mute)}.prog b{font-size:18px;color:var(--ink)}
+.bar{height:6px;width:220px;background:var(--line);border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.me{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.me input{flex:1 1 140px}
+input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:inherit}
+.queue{max-height:70vh;overflow:auto;margin:0 -14px;padding:0}
+.q{padding:9px 14px;border-top:1px solid var(--line);cursor:pointer}.q:hover{background:#faf8f4}.q.on{background:#f4ebe4;border-left:3px solid var(--acc)}
+.q small{color:var(--mute)}.q.done{opacity:.45}
+.tpls{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tpls button{padding:5px 9px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;font:inherit;font-size:12px}
+.tpls button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tpls button.grey{border-color:var(--warn)}.tpls button.follow{border-style:dashed}
+.dealer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}.dealer h2{margin:0;font-size:17px}
+.muted{color:var(--mute)}.issues{font-size:12px;color:var(--mute);margin-top:6px}
+.note{font-size:12px;padding:8px 10px;border-radius:6px;margin:8px 0}.note.safe{background:#e3f1e8}.note.grey{background:#f6ecd0}.note.follow{background:#ebe7f5}
+label.f{display:block;font-size:12px;color:var(--mute);margin:10px 0 3px}
+#subj{width:100%}#body{width:100%;min-height:320px;line-height:1.5}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.actions button{padding:9px 14px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit}
+.actions .primary{background:var(--acc);color:#fff;border-color:var(--acc)}.actions .ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:6px;opacity:0;transition:.2s}
+.toast.show{opacity:1}
+details{margin-top:14px}summary{cursor:pointer;color:var(--mute)}
+</style></head><body>
+<header>
+  <div><h1>Handschlag: email queue</h1><div class="muted">Genuine buyer inquiries. No website pitch in the first email. The website talk happens when they reply or you visit.</div></div>
+  <div class="prog"><b id="cnt">0</b> / <span id="goal">20</span> sent today<div class="bar"><i id="pbar" style="width:0"></i></div></div>
+</header>
+<div class="grid">
+  <div class="card">
+    <div class="me">
+      <input id="myname" placeholder="Your name">
+      <input id="myphone" placeholder="Your phone">
+      <input id="budget" placeholder="Budget, e.g. 12.000 €">
+      <input id="mytown" placeholder="Your town">
+    </div>
+    <div class="me"><label class="muted">max km <input id="maxkm" type="number" value="50" style="width:70px"></label>
+      <label class="muted"><input type="checkbox" id="hidedone" checked> hide contacted</label></div>
+    <div class="queue" id="queue"></div>
+  </div>
+  <div class="card" id="comp">
+    <div class="dealer"><div><h2 id="dname"></h2><div class="muted" id="dmeta"></div></div><div id="dlinks"></div></div>
+    <div class="issues" id="dissues"></div>
+    <div class="tpls" id="tpls"></div>
+    <div class="note" id="tnote"></div>
+    <label class="f">To</label><input id="to" style="width:100%">
+    <label class="f">Subject</label><input id="subj">
+    <label class="f">Message (editable)</label><textarea id="body"></textarea>
+    <div class="actions">
+      <button class="primary" id="mail">Open in Mail</button>
+      <button id="cpb">Copy text</button>
+      <button id="cps">Copy subject</button>
+      <button class="ok" id="sent">✓ Mark as emailed → next</button>
+      <button id="skip">Skip</button>
+    </div>
+    <details><summary>Rules of thumb</summary><ul class="muted">
+      <li>Only send a buyer inquiry if you'd actually buy from this dealer. That's what keeps it honest.</li>
+      <li>One email per dealer. No mass BCC. Rotate the templates (each dealer gets a different one automatically).</li>
+      <li>Phone or visit, then the website conversation. After that, send the one-pager only with their OK.</li>
+      <li>Templates 9 and 10 are marked: 9 is a grey zone, 10 is only for after a reply.</li>
+    </ul></details>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const DATA=/*DATA*/[];
+const $=id=>document.getElementById(id);
+const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let CRM=ls.get("handschlag_crm",{});
+const today=new Date().toISOString().slice(0,10);
+const sat=(()=>{const d=new Date();d.setDate(d.getDate()+((6-d.getDay()+7)%7||7));return d.toLocaleDateString("de-DE",{day:"numeric",month:"numeric"})})();
+
+const T=[
+{n:"1 · Kurz & direkt",k:"safe",s:"Anfrage: gepflegter Benziner für junge Familie",b:
+`{gruss}
+
+wir suchen aktuell ein zuverlässiges Familienauto und sind dabei auf {haendler} gestoßen. Haben Sie einen gepflegten Benziner (gern auch Hybrid), 5-türig und sparsam im Verbrauch, bis ca. {budget} im Bestand – oder bekommen Sie demnächst etwas Passendes rein?
+
+Über eine kurze Rückmeldung freue ich mich.
+
+Viele Grüße
+{name}
+{tel}`},
+{n:"2 · Kriterienliste",k:"safe",s:"Suche Familienauto – Benziner, 5-Türer, Isofix",b:
+`{gruss}
+
+wir sind auf der Suche nach einem Familienauto und würden gern bei Ihnen anfragen. Das wäre uns wichtig:
+
+– Benziner oder Benzin-Hybrid, sparsam (ca. 4–6 l/100 km)
+– 5 Türen, Isofix
+– technisch gut in Schuss, gern mit frischem TÜV und Scheckheft
+– Laufleistung darf auch höher sein, wenn das Auto gepflegt ist
+– Budget bis ca. {budget}
+
+Wenn Sie etwas Passendes haben – gern auch Fahrzeuge, die noch nicht online stehen – melden Sie sich gern per Mail oder telefonisch.
+
+Beste Grüße
+{name}
+{tel}`},
+{n:"3 · Familienzuwachs",k:"safe",s:"Familienzuwachs – wir suchen ein Auto",b:
+`{gruss}
+
+wir bekommen bald Nachwuchs – und brauchen deshalb in den nächsten Monaten ein verlässliches Auto. Uns ist vor allem wichtig, dass es technisch top ist und wir im ersten Jahr nicht in die Werkstatt müssen.
+
+Gesucht: Benziner (gern Hybrid), 5-türig, sparsam, Budget bis ca. {budget}. Marke und Alter sind zweitrangig.
+
+Hätten Sie da etwas für uns? Wir kommen auch gern vorbei.
+
+Viele Grüße
+{name}
+{tel}`},
+{n:"4 · Aus der Region",k:"safe",s:"Autokauf aus der Region – Anfrage aus {wohnort}",b:
+`{gruss}
+
+wir wohnen in {wohnort} und kaufen unser nächstes Auto lieber bei einem Händler aus der Umgebung als anonym über eine Plattform. Deshalb meine direkte Anfrage an Sie in {ort}:
+
+Haben Sie einen gepflegten, sparsamen Benziner (5-Türer, gern Hybrid) bis ca. {budget}?
+
+Über eine Rückmeldung oder einen Terminvorschlag zur Besichtigung würde ich mich freuen.
+
+Viele Grüße
+{name}
+{tel}`},
+{n:"5 · Gute Bewertungen",k:"safe",s:"Anfrage – Ihre Bewertungen haben uns überzeugt",b:
+`{gruss}
+
+{bewertung} Genau so einen Händler suchen wir für unser nächstes Auto.
+
+Wir brauchen ein zuverlässiges Familienauto: Benziner oder Hybrid, 5 Türen, sparsam, Budget bis ca. {budget}. Haben Sie aktuell etwas Passendes oder bekommen bald etwas rein?
+
+Viele Grüße
+{name}
+{tel}`},
+{n:"6 · Hybrid-Wunsch",k:"safe",s:"Toyota Hybrid o. ä. im Bestand?",b:
+`{gruss}
+
+haben Sie zufällig einen Toyota Hybrid (z. B. Auris, Corolla oder Yaris) oder etwas Vergleichbares – sparsamer Benziner, 5-türig – im Bestand? Laufleistung darf ruhig höher sein, solange das Auto gepflegt ist und Wartungsnachweise hat.
+
+Budget liegt bei ca. {budget}. Gern auch Fahrzeuge, die noch nicht inseriert sind.
+
+Danke und viele Grüße
+{name}
+{tel}`},
+{n:"7 · Noch nicht inseriert?",k:"safe",s:"Kurze Frage zu Ihrem Bestand",b:
+`{gruss}
+
+ich suche ein gepflegtes Familienauto und wollte kurz direkt bei Ihnen nachfragen, ob Sie etwas reinbekommen haben, das noch nicht online steht.
+
+Gesucht: Benziner/Hybrid, 5 Türen, sparsam, technisch einwandfrei, bis ca. {budget}.
+
+Wenn ja, freue ich mich über eine kurze Nachricht – gern auch telefonisch unter {tel}.
+
+Viele Grüße
+{name}`},
+{n:"8 · Probefahrt Samstag",k:"safe",s:"Besichtigung / Probefahrt am Samstag möglich?",b:
+`{gruss}
+
+wir sind auf der Suche nach einem Familienauto und würden am Samstag ({samstag}) gern bei Ihnen in {ort} vorbeikommen.
+
+Gesucht ist ein sparsamer Benziner (gern Hybrid), 5-türig, gepflegt, bis ca. {budget}. Haben Sie etwas, das wir uns anschauen und probefahren könnten? Dann würde ich gern einen Termin vereinbaren.
+
+Viele Grüße
+{name}
+{tel}`},
+{n:"9 · Transparent (Grauzone)",k:"grey",s:"Anfrage Familienauto",b:
+`{gruss}
+
+wir suchen ein zuverlässiges Familienauto (Benziner/Hybrid, 5-Türer, sparsam, bis ca. {budget}) und würden uns gern bei Ihnen umschauen. Haben Sie etwas Passendes?
+
+Kurz zur Transparenz: Beruflich beschäftige ich mich mit Websites und Sichtbarkeit bei Google und in KI-Suchen. Darum geht es hier aber nicht – wir suchen wirklich ein Auto.
+
+Viele Grüße
+{name}
+{tel}`},
+{n:"10 · Follow-up nach Antwort",k:"follow",s:"Re: Ihre Antwort zu unserem Autokauf",b:
+`{gruss}
+
+vielen Dank für Ihre Rückmeldung! Wir schauen uns das Fahrzeug gern an – passt Ihnen Samstag ({samstag})?
+
+Noch eine Sache, die ich gern beim Termin ansprechen würde: Ich arbeite beruflich an Websites und Google-/KI-Sichtbarkeit für lokale Betriebe und mir sind bei {haendler} ein paar Dinge aufgefallen, mit denen Sie online deutlich mehr Anfragen bekommen könnten. Vielleicht lässt sich da ja sogar etwas mit dem Autokauf verbinden – ganz unverbindlich, nur wenn Sie Lust haben.
+
+Viele Grüße
+{name}
+{tel}`}
+];
+const NOTES={safe:"✓ Genuine buyer inquiry, no advertising. Safe to send cold.",
+ grey:"⚠ Grey zone: mentions your profession but offers nothing. Low risk, but use sparingly.",
+ follow:"↩ Only use as a REPLY once the dealer has answered. Then the website topic is fine."};
+
+let cur=null,tpl=0;
+const me={name:ls.get("hs_name",""),tel:ls.get("hs_tel",""),budget:ls.get("hs_budget",""),town:ls.get("hs_town","")};
+$("myname").value=me.name;$("myphone").value=me.tel;$("budget").value=me.budget;$("mytown").value=me.town;
+[["myname","name","hs_name"],["myphone","tel","hs_tel"],["budget","budget","hs_budget"],["mytown","town","hs_town"]].forEach(([id,k,key])=>$(id).addEventListener("input",e=>{me[k]=e.target.value;ls.set(key,me[k]);fill()}));
+
+function sentToday(){return Object.values(CRM).filter(c=>c.emailed===today).length}
+function prog(){const n=sentToday();$("cnt").textContent=n;$("pbar").style.width=Math.min(100,n/20*100)+"%"}
+function contacted(d){const c=CRM[d.id];return c&&c.status&&c.status!=="new"&&c.status!=="to call"}
+function queue(){const mk=+$("maxkm").value,hd=$("hidedone").checked;
+ const L=DATA.filter(d=>d.km<=mk&&(!hd||!contacted(d)));
+ $("queue").innerHTML=L.map(d=>`<div class="q${cur&&cur.id===d.id?" on":""}${contacted(d)?" done":""}" data-id="${d.id}"><b>${esc(d.name)}</b><br><small>${esc(d.town)} · ${d.km} km · lead ${d.lead}${d.rating?` · ${d.rating}★`:""}</small></div>`).join("")||'<div class="q muted">Nothing left in range 🎉</div>';
+ $("queue").querySelectorAll(".q[data-id]").forEach(el=>el.onclick=()=>pick(DATA.find(d=>d.id===el.dataset.id)));
+ return L}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
+function pick(d){cur=d;tpl=hash(d.id)%8;render();queue()}
+function render(){if(!cur){$("comp").style.opacity=.4;return}$("comp").style.opacity=1;
+ $("dname").textContent=cur.name;
+ $("dmeta").textContent=[cur.person,cur.town+" · "+cur.km+" km",cur.rating?cur.rating+"★ ("+cur.reviews+")":"",cur.phone].filter(Boolean).join(" · ");
+ $("dlinks").innerHTML=cur.site?`<a href="${esc(cur.site.replace(/^https:/,"http:"))}" target="_blank">Website ↗</a>`:"";
+ $("dissues").textContent="For the conversation later: "+cur.top.join(" · ");
+ $("tpls").innerHTML=T.map((t,i)=>`<button class="${i===tpl?"on ":""}${t.k}" data-i="${i}">${esc(t.n)}</button>`).join("");
+ $("tpls").querySelectorAll("button").forEach(b=>b.onclick=()=>{tpl=+b.dataset.i;render()});
+ const t=T[tpl];$("tnote").className="note "+t.k;$("tnote").textContent=NOTES[t.k];
+ fill()}
+function fill(){if(!cur)return;const t=T[tpl];
+ const v={gruss:cur.person?`Guten Tag ${cur.person},`:"Guten Tag,",haendler:cur.name,ort:cur.town||"Ihrer Nähe",
+  name:me.name||"[Ihr Name]",tel:me.tel||"[Telefon]",budget:me.budget||"[Budget]",wohnort:me.town||"[Wohnort]",samstag:sat,
+  bewertung:cur.rating&&+cur.reviews>=10?`Ihre ${String(cur.rating).replace(".",",")}-Sterne-Bewertungen bei Google (${cur.reviews} Stück) haben uns überzeugt.`:"Wir haben viel Gutes über Sie gehört."};
+ const sub=s=>s.replace(/\{(\w+)\}/g,(m,k)=>v[k]??m);
+ $("to").value=cur.email;$("subj").value=sub(t.s);$("body").value=sub(t.b)}
+function toast(m){$("toast").textContent=m;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),1400)}
+async function copy(s,m){try{await navigator.clipboard.writeText(s);toast(m)}catch(e){toast("Copy failed – select & Cmd+C")}}
+$("cpb").onclick=()=>copy($("body").value,"Text copied");
+$("cps").onclick=()=>copy($("subj").value,"Subject copied");
+$("mail").onclick=()=>{location.href=`mailto:${encodeURIComponent($("to").value)}?subject=${encodeURIComponent($("subj").value)}&body=${encodeURIComponent($("body").value)}`};
+function next(){const L=queue().filter(d=>!contacted(d));pick(L.find(d=>d.id!==cur.id)||L[0]||cur)}
+$("sent").onclick=()=>{CRM=ls.get("handschlag_crm",{});const c=CRM[cur.id]||(CRM[cur.id]={status:"new",note:""});
+ c.status="emailed";c.emailed=today;c.note=((c.note||"")+`\n${today}: Mail "${T[tpl].n}"`).trim();ls.set("handschlag_crm",CRM);prog();toast("Marked as emailed");next()};
+$("skip").onclick=next;
+["maxkm","hidedone"].forEach(id=>$(id).addEventListener("input",queue));
+prog();const L=queue();if(L.length)pick(L[0]);else render();
+</script></body></html>
